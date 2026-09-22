@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" fill="none">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dff8ff"/><stop offset=".48" stop-color="#d4f2f7"/><stop offset="1" stop-color="#e8e7ff"/></linearGradient>
+  <linearGradient id="blueShirt" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#66c8ee"/><stop offset="1" stop-color="#4b8edc"/></linearGradient>
+  <linearGradient id="coralShirt" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffd4c7"/><stop offset="1" stop-color="#ef9f91"/></linearGradient>
+  <linearGradient id="mintShirt" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c9f4e7"/><stop offset="1" stop-color="#70cfc7"/></linearGradient>
+  <linearGradient id="towel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#a9dff0"/></linearGradient>
+  <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#4c9bb3" flood-opacity=".16"/></filter>
+</defs>
+<rect width="1600" height="1000" fill="url(#bg)"/>
+<!-- soft water rings -->
+<g opacity=".28" stroke="#56bfd4" stroke-width="18">
+ <circle cx="1310" cy="760" r="220"/><circle cx="1310" cy="760" r="280"/><circle cx="1310" cy="760" r="340"/>
+</g>
+<g opacity=".2" stroke="#ffffff" stroke-width="3">
+ <path d="M-50 790 C260 650 520 930 850 760 S1320 560 1660 730"/>
+ <path d="M-80 835 C260 700 510 980 870 805 S1350 610 1680 775"/>
+</g>
+<!-- clothesline -->
+<path d="M90 250 C430 205 720 285 1030 240 S1360 190 1510 235" stroke="#4c9fb4" stroke-width="4" opacity=".35"/>
+<g filter="url(#soft)">
+ <!-- blue shirt -->
+ <path d="M185 180q20-36 46 0l72 45 45 26-43 72-39-22v168H190V301l-39 22-43-72 45-26z" fill="url(#blueShirt)" opacity=".78"/>
+ <!-- coral shirt -->
+ <path d="M470 165q19-34 44 0l68 42 43 25-41 68-37-22v164h-77V278l-37 22-41-68 43-25z" fill="url(#coralShirt)" opacity=".8"/>
+ <!-- mint shirt -->
+ <path d="M1260 205q17-31 40 0l62 38 39 23-37 62-34-20v150h-70V308l-34 20-37-62 39-23z" fill="url(#mintShirt)" opacity=".75"/>
+</g>
+<!-- basket, rounded woven not box -->
+<g transform="translate(980 610) rotate(-4)" filter="url(#soft)">
+ <path d="M45 75 Q145 40 245 75 L222 235 Q145 270 68 235Z" fill="#3d9db0" opacity=".78"/>
+ <path d="M72 77Q145 18 218 77" stroke="#2d839b" stroke-width="16" fill="none" opacity=".75"/>
+ <path d="M72 95v125m38-130v140m38-143v145m38-140v135" stroke="#a6e4ea" stroke-width="10" opacity=".38"/>
+ <path d="M57 105Q145 78 233 105" stroke="#b8eef0" stroke-width="5" opacity=".5"/>
+</g>
+<!-- folded towel -->
+<g filter="url(#soft)" opacity=".9">
+ <rect x="1200" y="470" width="220" height="74" rx="22" fill="url(#towel)" transform="rotate(-5 1200 470)"/>
+ <path d="M1235 470v74m36-76v74m36-78v74m36-78v72m36-74v68" stroke="#5dc3d5" stroke-width="7" opacity=".48"/>
+</g>
+<!-- bubbles -->
+<g stroke="#4ab7ce" fill="none" opacity=".42">
+ <circle cx="340" cy="160" r="15" stroke-width="4"/><circle cx="390" cy="115" r="8" stroke-width="3"/>
+ <circle cx="1110" cy="140" r="25" stroke-width="4"/><circle cx="1170" cy="205" r="10" stroke-width="3"/>
+ <circle cx="610" cy="780" r="22" stroke-width="4"/><circle cx="670" cy="730" r="9" stroke-width="3"/>
+ <circle cx="1460" cy="430" r="16" stroke-width="4"/>
+</g>
+</svg>
