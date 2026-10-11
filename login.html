@@ -1,198 +1,70 @@
 <!DOCTYPE html>
 <html lang="id">
- <head>
-  <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>
-   LAUNDRY HINOMARU &mdash; Login
-  </title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
-  <link href="style.css" rel="stylesheet"/>
-  <style>
-   .login-page{
- min-height:100vh;display:grid;place-items:center;padding:28px;position:relative;overflow:hidden;
- background:
- linear-gradient(135deg,rgba(233,247,255,.91),rgba(247,252,255,.88)),
- url('assets/background.svg') center/cover;
-}
-.login-page:before,.login-page:after{content:"";position:absolute;border-radius:50%;pointer-events:none}
-.login-page:before{width:560px;height:560px;right:-190px;top:-250px;background:rgba(42,145,205,.14);box-shadow:0 0 0 70px rgba(42,145,205,.045)}
-.login-page:after{width:430px;height:430px;left:-190px;bottom:-230px;background:rgba(16,47,85,.09)}
-.login-card{
- width:min(430px,100%);position:relative;z-index:2;padding:34px;
- background:rgba(255,255,255,.97);border:1px solid rgba(42,145,205,.16);
- border-radius:28px;box-shadow:0 28px 80px rgba(16,47,85,.16)
-}
-.login-brand{display:flex;align-items:center;gap:13px;margin-bottom:26px}
-.login-brand img{width:52px;height:52px;object-fit:contain;filter:brightness(1.12)}
-.login-brand strong{display:block;color:#102f55;font-size:18px;letter-spacing:.01em}
-.login-brand span{font-size:11px;color:#71879b}
-.login-title{font-size:30px;color:#102f55;margin:0 0 7px}
-.login-subtitle{font-size:13px;color:#6d8297;margin:0 0 22px}
-.login-card label{display:block;color:#254667;font-size:12px;font-weight:800;margin:14px 0 7px}
-.login-card input,.login-card select{
- width:100%;box-sizing:border-box;border:1px solid #c8ddea;border-radius:13px;padding:12px 14px;
- background:#f8fcff;color:#173653;outline:none
-}
-.login-card input:focus,.login-card select:focus{border-color:#278dca;box-shadow:0 0 0 4px rgba(39,141,202,.11)}
-.login-primary{
- width:100%;border:0;border-radius:13px;padding:13px;margin-top:19px;
- background:linear-gradient(135deg,#102f55,#238dcc);color:#fff;font-weight:800;cursor:pointer
-}
-.login-secondary{
- width:100%;border:1px solid #c7ddeb;border-radius:13px;padding:11px;margin-top:9px;
- background:#eef8fd;color:#174b73;font-weight:800;cursor:pointer
-}
-.login-link{display:block;text-align:center;margin-top:16px;color:#267caf;font-size:12px;text-decoration:none;font-weight:800}
-.login-note{text-align:center;color:#8a9cac;font-size:11px;margin-top:18px}
-.msg{display:none;margin-top:13px;padding:10px 12px;border-radius:11px;font-size:12px}
-.msg.error{color:#b84747;background:#fff0ef;border:1px solid #ffd1cd}
-.msg.success{color:#17755a;background:#eaf9f3;border:1px solid #bdebd9}
-.hidden{display:none!important}
-.cashier-list{margin-top:15px;display:grid;gap:8px}
-.cashier-chip{
- display:flex;align-items:center;justify-content:space-between;padding:10px 12px;
- border:1px solid #d8e8f2;background:#f6fbfe;border-radius:12px;color:#23496a;font-size:12px
-}
-.cashier-chip button{
- border:0;background:#e8f3f9;color:#1b5c88;border-radius:9px;padding:6px 9px;cursor:pointer;font-size:11px
-}
-  </style>
-  <script src="jquery-3.7.1.min.js">
-  </script>
- </head>
- <body>
-  <main class="login-page">
-   <section class="login-card">
-    <div class="login-brand">
-     <img alt="Laundry Hinomaru" src="assets/logo-hinomaru-bright.png"/>
-     <div>
-      <strong>
-       LAUNDRY HINOMARU
-      </strong>
-      <span>
-       Sistem Kasir Laundry
-      </span>
-     </div>
-    </div>
-    <div id="loginView">
-     <h1 class="login-title">
-      Masuk
-     </h1>
-     <p class="login-subtitle">
-      Masuk ke sistem kasir.
-     </p>
-     <form id="loginForm">
-      <label for="cashierSelect">
-       Nama Kasir
-      </label>
-      <select id="cashierSelect" required="">
-      </select>
-      <label for="password">
-       Password
-      </label>
-      <input id="password" placeholder="Password" required="" type="password"/>
-      <button class="login-primary" type="submit">
-       Masuk
-      </button>
-     </form>
-     <a class="login-link" href="#" id="manageLink">
-      Kelola kasir
-     </a>
-     <div class="msg error" id="loginError">
-     </div>
-    </div>
-    <div class="hidden" id="setupView">
-     <h1 class="login-title">
-      Kasir Pertama
-     </h1>
-     <p class="login-subtitle">
-      Buat akun kasir pertama.
-     </p>
-     <form id="setupForm">
-      <label>
-       Nama Kasir
-      </label>
-      <input id="setupName" placeholder="Nama kasir" required=""/>
-      <label>
-       Password
-      </label>
-      <input id="setupPass" placeholder="Minimal 6 karakter" required="" type="password"/>
-      <label>
-       Konfirmasi Password
-      </label>
-      <input id="setupConfirm" placeholder="Ulangi password" required="" type="password"/>
-      <button class="login-primary" type="submit">
-       Buat Akun
-      </button>
-     </form>
-     <div class="msg error" id="setupError">
-     </div>
-    </div>
-    <div class="hidden" id="manageView">
-     <h1 class="login-title">
-      Kelola Kasir
-     </h1>
-     <p class="login-subtitle">
-      Tambah akun kasir untuk perangkat ini.
-     </p>
-     <div class="cashier-list" id="cashierList">
-     </div>
-     <form id="addForm">
-      <label>
-       Nama Kasir Baru
-      </label>
-      <input id="addName" placeholder="Nama kasir" required=""/>
-      <label>
-       Password
-      </label>
-      <input id="addPass" placeholder="Minimal 6 karakter" required="" type="password"/>
-      <label>
-       Konfirmasi Password
-      </label>
-      <input id="addConfirm" placeholder="Ulangi password" required="" type="password"/>
-      <button class="login-primary" type="submit">
-       Tambah Kasir
-      </button>
-     </form>
-     <button class="login-secondary" id="backLogin">
-      Kembali ke Login
-     </button>
-     <div class="msg error" id="addError">
-     </div>
-     <div class="msg success" id="addSuccess">
-     </div>
-    </div>
-    <p class="login-note">
-     LAUNDRY HINOMARU
-    </p>
-   </section>
-  </main>
-  <script>
-   const KEY='hinomaru_cashiers_v2';
-const SESSION='hinomaru_cashier_session_v1';
-const $=id=>document.getElementById(id);
-const getCashiers=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return[]}};
-const saveCashiers=a=>localStorage.setItem(KEY,JSON.stringify(a));
-const show=v=>{['loginView','setupView','manageView'].forEach(id=>$(id).classList.add('hidden'));$(v).classList.remove('hidden')};
-const hash=async value=>{const data=new TextEncoder().encode(value);const buf=await crypto.subtle.digest('SHA-256',data);return Array.from(new Uint8Array(buf)).map(x=>x.toString(16).padStart(2,'0')).join('')};
-function message(id,text,ok=false){const el=$(id);el.textContent=text;el.style.display='block';el.className='msg '+(ok?'success':'error')}
-function hide(id){$(id).style.display='none'}
-function renderSelect(){const a=getCashiers(),s=$('cashierSelect');s.innerHTML=a.map((x,i)=>`<option value="${i}">${x.name}</option>`).join('')}
-function renderCashiers(){const a=getCashiers();$('cashierList').innerHTML=a.map((x,i)=>`<div class="cashier-chip"><span>${x.name}</span><button type="button" onclick="removeCashier(${i})">Hapus</button></div>`).join('')}
-function refresh(){const a=getCashiers();if(!a.length){show('setupView');return}renderSelect();show('loginView')}
-$('setupForm').onsubmit=async e=>{e.preventDefault();hide('setupError');const name=$('setupName').value.trim(),pass=$('setupPass').value,confirm=$('setupConfirm').value;if(!name)return message('setupError','Nama kasir wajib diisi.');if(pass.length<6)return message('setupError','Password minimal 6 karakter.');if(pass!==confirm)return message('setupError','Konfirmasi password tidak sama.');const h=await hash(pass);saveCashiers([{name,hash:h}]);localStorage.setItem('hinomaru_cashier_session_v1',JSON.stringify({name,loginAt:new Date().toISOString()}));location.replace('index.html')};
-$('loginForm').onsubmit=async e=>{e.preventDefault();hide('loginError');const a=getCashiers(),x=a[Number($('cashierSelect').value)],pass=$('password').value,h=await hash(pass);if(!x||x.hash!==h)return message('loginError','Password salah.');localStorage.setItem(SESSION,JSON.stringify({name:x.name,loginAt:new Date().toISOString()}));location.replace('index.html')};
-$('manageLink').onclick=e=>{e.preventDefault();renderCashiers();show('manageView')};
-$('backLogin').onclick=()=>refresh();
-$('addForm').onsubmit=async e=>{e.preventDefault();hide('addError');hide('addSuccess');const a=getCashiers(),name=$('addName').value.trim(),pass=$('addPass').value,confirm=$('addConfirm').value;if(!name)return message('addError','Nama kasir wajib diisi.');if(a.some(x=>x.name.toLowerCase()===name.toLowerCase()))return message('addError','Nama kasir sudah digunakan.');if(pass.length<6)return message('addError','Password minimal 6 karakter.');if(pass!==confirm)return message('addError','Konfirmasi password tidak sama.');a.push({name,hash:await hash(pass)});saveCashiers(a);renderCashiers();$('addName').value='';$('addPass').value='';$('addConfirm').value='';message('addSuccess','Kasir berhasil ditambahkan.',true)};
-window.removeCashier=i=>{const a=getCashiers();if(a.length<=1)return message('addError','Minimal satu kasir harus tetap ada.');a.splice(i,1);saveCashiers(a);renderCashiers()};
-// Migrate the previous plain-text v2 accounts created by an earlier build.
-(async()=>{const raw=getCashiers();if(raw.some(x=>x.password&&!x.hash)){for(const x of raw){if(x.password&&!x.hash){x.hash=await hash(x.password);delete x.password}}saveCashiers(raw)}refresh()})();
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
-  </script>
-  <script src="app.js">
-  </script>
- </body>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAUNDRY HINOMARU — Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="style.css" rel="stylesheet">
+    <style>
+        .login-page{min-height:100vh;display:grid;place-items:center;padding:28px;position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(233,247,255,.91),rgba(247,252,255,.88)),url('assets/background.svg') center/cover}
+        .login-page:before,.login-page:after{content:"";position:absolute;border-radius:50%;pointer-events:none}
+        .login-page:before{width:560px;height:560px;right:-190px;top:-250px;background:rgba(42,145,205,.14);box-shadow:0 0 0 70px rgba(42,145,205,.045)}
+        .login-page:after{width:430px;height:430px;left:-190px;bottom:-230px;background:rgba(16,47,85,.09)}
+        .login-card{width:min(430px,100%);position:relative;z-index:2;padding:34px;background:rgba(255,255,255,.97);border:1px solid rgba(42,145,205,.16);border-radius:28px;box-shadow:0 28px 80px rgba(16,47,85,.16)}
+        .login-brand{display:flex;align-items:center;gap:13px;margin-bottom:26px}.login-brand img{width:52px;height:52px;object-fit:contain}.login-brand strong{display:block;color:#102f55;font-size:18px}.login-brand span{font-size:11px;color:#71879b}
+        .login-title{font-size:30px;color:#102f55;margin:0 0 7px}.login-subtitle{font-size:13px;color:#6d8297;margin:0 0 22px}.login-card label{display:block;color:#254667;font-size:12px;font-weight:800;margin:14px 0 7px}
+        .login-card input,.login-card select{width:100%;box-sizing:border-box;border:1px solid #c8ddea;border-radius:13px;padding:12px 14px;background:#f8fcff;color:#173653;outline:none}.login-card input:focus,.login-card select:focus{border-color:#278dca;box-shadow:0 0 0 4px rgba(39,141,202,.11)}
+        .login-primary{width:100%;border:0;border-radius:13px;padding:13px;margin-top:19px;background:linear-gradient(135deg,#102f55,#238dcc);color:#fff;font-weight:800;cursor:pointer}.login-secondary{width:100%;border:1px solid #c7ddeb;border-radius:13px;padding:11px;margin-top:9px;background:#eef8fd;color:#174b73;font-weight:800;cursor:pointer}
+        .login-link{display:block;text-align:center;margin-top:16px;color:#267caf;font-size:12px;text-decoration:none;font-weight:800}.login-note{text-align:center;color:#8a9cac;font-size:11px;margin-top:18px}.msg{display:none;margin-top:13px;padding:10px 12px;border-radius:11px;font-size:12px}.msg.error{color:#b84747;background:#fff0ef;border:1px solid #ffd1cd}.msg.success{color:#17755a;background:#eaf9f3;border:1px solid #bdebd9}.hidden{display:none!important}.cashier-list{margin-top:15px;display:grid;gap:8px}.cashier-chip{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #d8e8f2;background:#f6fbfe;border-radius:12px;color:#23496a;font-size:12px}
+    </style>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+</head>
+<body>
+<main class="login-page">
+    <section class="login-card">
+        <div class="login-brand">
+            <img src="assets/logo-hinomaru-bright.png" alt="Laundry Hinomaru">
+            <div><strong>LAUNDRY HINOMARU</strong><span>Sistem Kasir Laundry</span></div>
+        </div>
+
+        <div id="loginView">
+            <h1 class="login-title">Masuk</h1>
+            <p class="login-subtitle">Masuk ke sistem kasir Laundry Hinomaru.</p>
+            <form id="loginForm">
+                <label for="username">Username</label>
+                <input id="username" type="text" placeholder="Username kasir" autocomplete="username" required>
+                <label for="password">Password</label>
+                <input id="password" type="password" placeholder="Password" autocomplete="current-password" required>
+                <button class="login-primary" type="submit">Masuk</button>
+            </form>
+            <div class="msg error" id="loginError"></div>
+            <button type="button" class="login-secondary" id="toggleCashier">Kelola Kasir</button>
+        </div>
+
+        <div id="cashierView" class="hidden">
+            <h1 class="login-title">Kelola Kasir</h1>
+            <p class="login-subtitle"></p>
+            <form id="cashierForm">
+                <label for="cashierNameInput">Nama Kasir</label>
+                <input id="cashierNameInput" type="text" placeholder="Nama kasir" required>
+                <label for="cashierUsernameInput">Username</label>
+                <input id="cashierUsernameInput" type="text" placeholder="Username" required>
+                <label for="cashierPasswordInput">Password</label>
+                <input id="cashierPasswordInput" type="password" placeholder="Password" required>
+                <label for="cashierPasswordConfirm">Konfirmasi Password</label>
+                <input id="cashierPasswordConfirm" type="password" placeholder="Ulangi password" required>
+                <button class="login-primary" type="submit">Tambah Kasir</button>
+            </form>
+            <div class="msg error" id="cashierError"></div>
+            <div class="msg success" id="cashierSuccess"></div>
+            <button type="button" class="login-secondary" id="backToLogin">Kembali ke Login</button>
+        </div>
+
+        <p class="login-note">LAUNDRY HINOMARU</p>
+    </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="app.js"></script>
+</body>
 </html>

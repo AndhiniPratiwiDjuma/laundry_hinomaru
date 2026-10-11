@@ -1,317 +1,728 @@
-const FALLBACK_SERVICES = [
-    {
-        id: 1,
-        name: 'Cuci Kering + Setrika',
-        price: 7000,
-        unit: 'kg'
-    },
-    {
-        id: 2,
-        name: 'Cuci Kering + Lipat',
-        price: 4000,
-        unit: 'kg'
-    },
-    {
-        id: 3,
-        name: 'Cuci Kering',
-        price: 3000,
-        unit: 'kg'
-    },
-    {
-        id: 4,
-        name: 'Setrika',
-        price: 5000,
-        unit: 'kg'
-    },
-    {
-        id: 5,
-        name: 'Cuci Express 3 Jam',
-        price: 15000,
-        unit: 'kg'
-    },
-    {
-        id: 6,
-        name: 'Cuci Express 6 Jam',
-        price: 10000,
-        unit: 'kg'
-    },
-    {
-        id: 7,
-        name: 'Cuci Satuan',
-        price: 10000,
-        unit: 'pcs'
-    },
-    {
-        id: 8,
-        name: 'Selimut Besar',
-        price: 15000,
-        unit: 'pcs'
-    },
-    {
-        id: 9,
-        name: 'Selimut Kecil',
-        price: 10000,
-        unit: 'pcs'
-    },
-    {
-        id: 10,
-        name: 'Sepray',
-        price: 15000,
-        unit: 'pcs'
-    },
-    {
-        id: 11,
-        name: 'Handuk',
-        price: 5000,
-        unit: 'pcs'
-    }
-];
-let services = [], allOrders = [];
-const localMode = true;
-const AUTH_KEY = 'hinomaru_cashiers_v2';
-const SESSION_KEY = 'hinomaru_cashier_session_v1';
-const LOGIN_PAGE = 'login.html';
-function authAccount() { try {
-    const v = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null');
-    return Array.isArray(v) ? (v[0] || null) : v;
-}
-catch (e) {
-    return null;
-} }
-function authSession() { try {
-    return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
-}
-catch (e) {
-    return null;
-} }
-function cashierName() { return authSession()?.name || 'Kasir'; }
-async function passwordDigest(v) { const data = new TextEncoder().encode(v); const buf = await crypto.subtle.digest('SHA-256', data); return Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, '0')).join(''); }
-function isLoginPage() { return /\/(?:login\.html)?$/i.test(location.pathname) && /login\.html$/i.test(location.pathname); }
-async function requireAuth() { if (isLoginPage())
-    return; const s = authSession(); if (!s?.name) {
-    location.replace(LOGIN_PAGE);
-    return false;
-} return true; }
-const rupiah = n => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(n) || 0);
-const esc = t => $('<div>').text(t ?? '').html();
-const localKey = 'hinomaru_orders_v4';
-function localOrders() { try {
-    return JSON.parse(localStorage.getItem(localKey) || '[]');
-}
-catch (e) {
-    return [];
-} }
-function saveLocal(o) { localStorage.setItem(localKey, JSON.stringify(o)); }
-function localNota() { const d = new Date(); const date = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0'); const n = localOrders().length + 1; return `HN-${date}-${String(n).padStart(3, '0')}`; }
-function getLocalService(id) { return services.find(s => String(s.id) === String(id)) || FALLBACK_SERVICES.find(s => String(s.id) === String(id)); }
-function loadServices(done) { if (localMode) {
-    services = FALLBACK_SERVICES;
-    afterServices(done);
-    return;
-} $.getJSON('/api/services').done(d => { services = d?.length ? d : FALLBACK_SERVICES; afterServices(done); }).fail(() => { services = FALLBACK_SERVICES; afterServices(done); }); }
-function afterServices(done) { renderServiceOptions(); renderFullPrices(); if ($('#orderItems').length && !$('#orderItems .service-row').length)
-    addOrderItem(); if (done)
-    done(); }
-function renderServiceOptions() { const s = $('#service'); if (!s.length)
-    return; s.empty().append('<option value="">Pilih layanan...</option>'); services.forEach(x => s.append(`<option value="${x.id}">${esc(x.name)} — ${rupiah(x.price)}/${x.unit}</option>`)); }
-function renderFullPrices() { const box = $('#fullPriceList'); if (!box.length)
-    return; box.html(services.map(s => `<article class="price-card col h-100 p-4"><div class="price-content"><h3 class="mb-2">${esc(s.name)}</h3><p class="mb-0">Tarif per ${esc(s.unit)}</p><strong class="d-block mt-3">${rupiah(s.price)}</strong></div></article>`).join('')); }
-function addOrderItem() { const row = $(`<div class="service-row"><label>Layanan<select class="item-service"><option value="">Pilih layanan...</option>${services.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label><label>Jumlah<input class="item-qty" type="number" min="0.1" step="0.1" value="1"></label><div class="row-price">Subtotal<br><b>Rp0</b></div><button type="button" class="remove-item" title="Hapus layanan">×</button></div>`); $('#orderItems').append(row); refreshOrderRows(); }
-function refreshOrderRows() { $('.service-row').each(function () { const row = $(this), s = getLocalService(row.find('.item-service').val()), qty = row.find('.item-qty'), q = Number(qty.val()) || 0; if (s) {
-    qty.attr('step', s.unit === 'kg' ? '0.1' : '1');
-    qty.attr('min', s.unit === 'kg' ? '0.1' : '1');
-    if (s.unit === 'pcs' && q > 0 && q % 1 !== 0)
-        qty.val(Math.max(1, Math.round(q)));
-    row.find('.row-price b').text(rupiah(Math.round(s.price * (Number(qty.val()) || 0))));
-}
-else {
-    row.find('.row-price b').text('Rp0');
-} }); updateGrandTotal(); }
-function updateGrandTotal() { let total = 0; $('.service-row').each(function () { const s = getLocalService($(this).find('.item-service').val()); const q = Number($(this).find('.item-qty').val()) || 0; if (s)
-    total += Math.round(s.price * q); }); $('#totalPreview').text(rupiah(total)); }
-function buildPayload() { const items = []; $('.service-row').each(function () { const sid = Number($(this).find('.item-service').val()); const q = Number($(this).find('.item-qty').val()); if (sid && q > 0)
-    items.push({ serviceId: sid, quantity: q }); }); return items; }
-function normalizeLocalOrder(raw) { return raw.map(o => { if (o.items)
-    return o; const s = o.service || {}; return { ...o, items: [{ service: s, quantity: o.quantity, subtotal: o.total }] }; }); }
-function fetchOrders(cb) { if (localMode) {
-    allOrders = normalizeLocalOrder(localOrders());
-    cb && cb(allOrders);
-    return;
-} $.getJSON('/api/orders').done(d => { allOrders = d || []; cb && cb(allOrders); }).fail(() => { allOrders = normalizeLocalOrder(localOrders()); cb && cb(allOrders); }); }
-function localCreate(customer, items) { let total = 0; const mapped = items.map(x => { const s = getLocalService(x.serviceId); const subtotal = Math.round(s.price * x.quantity); total += subtotal; return { service: s, quantity: x.quantity, subtotal }; }); const o = { nota: localNota(), customer, items: mapped, total, status: 'DIPROSES', createdAt: new Date().toISOString() }; const list = localOrders(); list.unshift(o); saveLocal(list); return o; }
-function createOrder(customer, items, onDone, onFail) { if (localMode) {
+const API = 'database.php';
+const SESSION_KEY = 'hinomaru_session';
+
+let services = [];
+let allOrders = [];
+
+const rupiah = (value) => new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0
+}).format(Number(value) || 0);
+
+const esc = (value) => $('<div>').text(value ?? '').html();
+
+function getSession() {
     try {
-        onDone(localCreate(customer, items));
+        return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+    } catch (e) {
+        return null;
     }
-    catch (e) {
-        onFail(e.message);
-    }
-    return;
-} $.ajax({ url: '/api/orders', method: 'POST', contentType: 'application/json', data: JSON.stringify({ customer, items, cashier: cashierName() }) }).done(onDone).fail(x => { try {
-    onFail(x.responseJSON?.message || 'Gagal menyimpan pesanan.');
 }
-catch (e) {
-    onFail('Gagal menyimpan pesanan.');
-} }); }
-function updateStatus(nota, status, onDone, onFail) { if (localMode) {
-    const list = localOrders();
-    const o = list.find(x => x.nota === nota);
-    if (!o) {
-        onFail('Nota tidak ditemukan.');
-        return;
-    }
-    o.status = status;
-    saveLocal(list);
-    onDone(o);
-    return;
-} $.ajax({ url: '/api/orders/' + encodeURIComponent(nota) + '/status', method: 'PATCH', contentType: 'application/json', data: JSON.stringify({ status }) }).done(onDone).fail(x => onFail(x.responseJSON?.message || 'Gagal mengubah status.')); }
-function statusBadge(s) { return `<span class="status ${s}">${s}</span>`; }
-function itemsSummary(o) { return (o.items || []).map(i => `${esc(i.service.name)} (${i.quantity} ${i.service.unit})`).join(', '); }
-function orderCard(o) { let a = ''; if (o.status === 'DIPROSES')
-    a = `<button class="small-btn success status-btn" data-nota="${esc(o.nota)}" data-status="SELESAI">Tandai Selesai</button>`; if (o.status === 'SELESAI')
-    a = ``; return `<article class="queue-card"><div class="queue-top"><span class="nota">${esc(o.nota)}</span>${statusBadge(o.status)}</div><h3>${esc(o.customer)}</h3><p>${itemsSummary(o)} · <b>${rupiah(o.total)}</b></p><div class="queue-actions">${a}</div></article>`; }
-function receiptHTML(o) { const rows = (o.items || []).map(i => `<div class="receipt-item"><div><b>${esc(i.service.name)}</b><small>${i.quantity} ${i.service.unit} × ${rupiah(i.service.price)}</small></div><strong>${rupiah(i.subtotal)}</strong></div>`).join(''); return `<div class="receipt-head"><img src="assets/logo-hinomaru-bright.png" alt="Logo Laundry Hinomaru"><div><h2>LAUNDRY HINOMARU</h2><p>Jl. Skarda N. No.80, Mks</p><p>0823 9367 8475</p></div></div><div class="receipt-title">NOTA LAUNDRY</div><div class="receipt-meta"><div><span>No. Nota</span><b>${esc(o.nota)}</b></div><div><span>Tanggal</span><b>${new Date(o.createdAt).toLocaleString('id-ID')}</b></div><div><span>Pelanggan</span><b>${esc(o.customer)}</b></div><div><span>Kasir</span><b>${esc(o.cashier || cashierName())}</b></div></div><div class="receipt-line"></div>${rows}<div class="receipt-total"><span>TOTAL</span><strong>${rupiah(o.total)}</strong></div><p class="receipt-thanks">Terima kasih · Laundry Hinomaru</p>`; }
-function loadDashboard() { if (!$('#statTotal').length)
-    return; if (localMode) {
-    const o = normalizeLocalOrder(localOrders());
-    $('#statTotal').text(o.length);
-    $('#statProcess').text(o.filter(x => x.status === 'DIPROSES').length);
-    $('#statDone').text(o.filter(x => x.status === 'SELESAI').length);
-    $('#statPicked').text(o.filter(x => x.status === 'DIAMBIL').length);
-    $('#statRevenue').text(rupiah(o.filter(x => x.status === 'SELESAI' || x.status === 'DIAMBIL').reduce((a, x) => a + x.total, 0)));
-    fetchOrders(orders => $('#recentOrders').html(orders.slice(0, 6).map(x => `<a class="recent-item" href="riwayat.html"><div><b>${esc(x.customer)}</b><small>${itemsSummary(x)}</small></div><strong>${rupiah(x.total)}</strong></a>`).join('') || '<div class="empty-state">Belum ada pesanan.</div>'));
-    return;
-} $.getJSON('/api/dashboard').done(d => { $('#statTotal').text(d.totalOrders); $('#statProcess').text(d.processed); $('#statDone').text(d.done); $('#statPicked').text(d.picked); $('#statRevenue').text(rupiah(d.revenue)); }); fetchOrders(orders => $('#recentOrders').html(orders.slice(0, 6).map(x => `<a class="recent-item" href="riwayat.html"><div><b>${esc(x.customer)}</b><small>${itemsSummary(x)}</small></div><strong>${rupiah(x.total)}</strong></a>`).join('') || '<div class="empty-state">Belum ada pesanan.</div>')); }
-function loadQueue() { if (!$('#processingList').length)
-    return; fetchOrders(orders => { const p = orders.filter(x => x.status === 'DIPROSES'), d = orders.filter(x => x.status === 'SELESAI'); $('#processCount').text(p.length); $('#doneCount').text(d.length); $('#processingList').html(p.map(orderCard).join('') || '<div class="empty-state">Tidak ada cucian diproses.</div>'); $('#doneList').html(d.map(orderCard).join('') || '<div class="empty-state">Belum ada yang siap diambil.</div>'); }); }
-function renderHistory() { if (!$('#historyBody').length)
-    return; const q = ($('#historySearch').val() || '').toLowerCase(); const f = allOrders.filter(o => (o.nota + ' ' + o.customer + ' ' + itemsSummary(o)).toLowerCase().includes(q)); $('#historyCount').text(`${f.length} pesanan`); $('#historyBody').html(f.map(o => `<tr><td><b>${esc(o.nota)}</b></td><td>${esc(o.customer)}</td><td>${itemsSummary(o)}</td><td><b>${rupiah(o.total)}</b></td><td>${statusBadge(o.status)}</td><td><div class="history-actions">${(o.status === 'SELESAI' || o.status === 'DIAMBIL') ? `<a class="table-action" href="nota.html?nota=${encodeURIComponent(o.nota)}">Cetak Nota</a>` : `<a class="table-action" href="nota.html?nota=${encodeURIComponent(o.nota)}">Cetak Nota</a>`}<button class="table-action edit-order" data-nota="${esc(o.nota)}">Edit</button><button class="table-action danger delete-order" data-nota="${esc(o.nota)}">Hapus</button></div></td></tr>`).join('') || '<tr><td colspan="6" class="empty">Belum ada riwayat pesanan.</td></tr>'); }
-function editRowHTML(item) { const sid = item?.service?.id || item?.serviceId || ''; const qty = item?.quantity || 1; return `<div class="service-row edit-row"><label>Layanan<select class="edit-service"><option value="">Pilih layanan...</option>${services.map(x => `<option value="${x.id}" ${String(x.id) === String(sid) ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label><label>Jumlah<input class="edit-qty" type="number" min="0.1" step="0.1" value="${qty}"></label><div class="row-price">Subtotal<br><b>Rp0</b></div><button type="button" class="remove-edit-item" title="Hapus layanan">×</button></div>`; }
-function refreshEditRows() { $('.edit-row').each(function () { const row = $(this), s = getLocalService(row.find('.edit-service').val()), q = Number(row.find('.edit-qty').val()) || 0; if (s) {
-    row.find('.edit-qty').attr('step', s.unit === 'kg' ? '0.1' : '1').attr('min', s.unit === 'kg' ? '0.1' : '1');
-    if (s.unit === 'pcs' && q > 0 && q % 1 !== 0)
-        row.find('.edit-qty').val(Math.max(1, Math.round(q)));
-    row.find('.row-price b').text(rupiah(Math.round(s.price * (Number(row.find('.edit-qty').val()) || 0))));
+
+function cashierName() {
+    return getSession()?.name || '';
 }
-else
-    row.find('.row-price b').text('Rp0'); }); let total = 0; $('.edit-row').each(function () { const s = getLocalService($(this).find('.edit-service').val()), q = Number($(this).find('.edit-qty').val()) || 0; if (s)
-    total += Math.round(s.price * q); }); $('#editTotal').text(rupiah(total)); }
-function buildEditPayload() { const items = []; $('.edit-row').each(function () { const sid = Number($(this).find('.edit-service').val()), q = Number($(this).find('.edit-qty').val()); if (sid && q > 0)
-    items.push({ serviceId: sid, quantity: q }); }); return items; }
-function addEditItem(item) { $('#editItems').append(editRowHTML(item)); refreshEditRows(); }
-function openEditOrder(nota) { const o = allOrders.find(x => x.nota === nota) || normalizeLocalOrder(localOrders()).find(x => x.nota === nota); if (!o)
-    return toast('Pesanan tidak ditemukan.'); $('#editNota').val(o.nota); $('#editCustomer').val(o.customer); $('#editItems').empty(); (o.items || []).forEach(addEditItem); if (!o.items?.length)
-    addEditItem(); $('#editModal').addClass('open').attr('aria-hidden', 'false'); refreshEditRows(); }
-function updateOrder(nota, customer, items, onDone, onFail) { if (localMode) {
-    const list = localOrders();
-    const o = list.find(x => x.nota === nota);
-    if (!o) {
-        onFail('Nota tidak ditemukan.');
+
+function cashierUsername() {
+    return getSession()?.username || '';
+}
+
+function isLoginPage() {
+    return location.pathname.toLowerCase().endsWith('/login.html');
+}
+
+function showMessage(message) {
+    const toast = $('#toast');
+    if (!toast.length) {
+        alert(message);
         return;
     }
-    let total = 0;
-    o.customer = customer;
-    o.items = items.map(x => { const s = getLocalService(x.serviceId); const subtotal = Math.round(s.price * x.quantity); total += subtotal; return { service: s, quantity: x.quantity, subtotal }; });
-    o.total = total;
-    saveLocal(list);
-    onDone(o);
-    return;
-} $.ajax({ url: '/api/orders/' + encodeURIComponent(nota), method: 'PUT', contentType: 'application/json', data: JSON.stringify({ customer, items, cashier: cashierName() }) }).done(onDone).fail(x => onFail(x.responseJSON?.message || 'Gagal mengubah pesanan.')); }
-function deleteOrder(nota, onDone, onFail) { if (localMode) {
-    const list = localOrders();
-    const next = list.filter(x => x.nota !== nota);
-    if (next.length === list.length) {
-        onFail('Nota tidak ditemukan.');
-        return;
-    }
-    saveLocal(next);
-    onDone();
-    return;
-} $.ajax({ url: '/api/orders/' + encodeURIComponent(nota), method: 'DELETE' }).done(onDone).fail(x => onFail(x.responseJSON?.message || 'Gagal menghapus pesanan.')); }
-function initLoginPage() {
-    const account = authAccount();
-    const first = !account;
-    $('#loginTitle').text(first ? 'Buat akun kasir' : 'Masuk ke sistem');
-    $('#loginSubtitle').text(first ? 'Buat nama kasir dan password untuk penggunaan pertama.' : 'Masukkan nama kasir dan password untuk melanjutkan.');
-    $('#loginSubmit').text(first ? 'Buat akun & masuk' : 'Masuk');
-    $('#confirmWrap').toggle(first);
-    $('#loginHint').text(first ? 'Akun kasir disimpan di perangkat ini. Gunakan password yang mudah kamu ingat tetapi tidak mudah ditebak.' : 'Jika belum memiliki akun di perangkat ini, hapus akun dari menu keluar lalu buat ulang.');
-    $('#loginForm').on('submit', async function (e) {
-        e.preventDefault();
-        const name = $('#loginCashier').val().trim(), pass = $('#loginPassword').val(), confirm = $('#loginConfirm').val();
-        const msg = $('#loginMessage').removeClass('show error success');
-        if (!name || pass.length < 4) {
-            msg.text('Nama kasir wajib diisi dan password minimal 4 karakter.').addClass('show error');
-            return;
-        }
-        const hash = await passwordDigest(pass);
-        if (first) {
-            if (pass !== confirm) {
-                msg.text('Konfirmasi password belum sama.').addClass('show error');
-                return;
-            }
-            localStorage.setItem(AUTH_KEY, JSON.stringify({ name, hash, createdAt: new Date().toISOString() }));
-            localStorage.setItem(SESSION_KEY, JSON.stringify({ name, loginAt: new Date().toISOString() }));
-            location.replace('index.html');
-            return;
-        }
-        if (name !== account.name || hash !== account.hash) {
-            msg.text('Nama kasir atau password tidak sesuai.').addClass('show error');
-            return;
-        }
-        localStorage.setItem(SESSION_KEY, JSON.stringify({ name, loginAt: new Date().toISOString() }));
-        location.replace('index.html');
+    toast.text(message).addClass('show');
+    setTimeout(() => toast.removeClass('show'), 2500);
+}
+
+function apiGet(action, data = {}) {
+    return $.ajax({
+        url: API,
+        method: 'GET',
+        data: { action, ...data },
+        dataType: 'json'
     });
 }
-function toast(msg) { const t = $('#toast'); if (!t.length)
-    return; t.text(msg).addClass('show'); setTimeout(() => t.removeClass('show'), 2500); }
-$(async function () {
-    if (isLoginPage()) {
-        initLoginPage();
+
+function apiPost(action, data = {}) {
+    return $.ajax({
+        url: API + '?action=' + encodeURIComponent(action),
+        method: 'POST',
+        data: JSON.stringify(data),
+        contentType: 'application/json; charset=utf-8',
+        dataType: 'json'
+    });
+}
+
+function requireLogin() {
+    if (isLoginPage()) return true;
+    if (!getSession()?.id) {
+        location.replace('login.html');
+        return false;
+    }
+    return true;
+}
+
+function setCashierName() {
+    $('#cashierName').text(cashierName() || 'Kasir');
+}
+
+function statusBadge(status) {
+    return `<span class="status ${esc(status)}">${esc(status)}</span>`;
+}
+
+function itemsSummary(order) {
+    return (order.items || []).map(item =>
+        `${esc(item.service.name)} (${item.quantity} ${esc(item.service.unit)})`
+    ).join(', ');
+}
+
+function getService(id) {
+    return services.find(service => String(service.id) === String(id));
+}
+
+function loadServices(done) {
+    apiGet('services')
+        .done(data => {
+            services = Array.isArray(data) ? data : [];
+            renderServiceOptions();
+            renderFullPrices();
+            if ($('#orderItems').length && !$('#orderItems .service-row').length) {
+                addOrderItem();
+            }
+            if (done) done();
+        })
+        .fail(xhr => {
+            console.error(xhr.responseText);
+            showMessage('Gagal mengambil layanan dari database.');
+        });
+}
+
+function renderServiceOptions() {
+    const select = $('#service');
+    if (!select.length) return;
+
+    select.empty().append('<option value="">Pilih layanan...</option>');
+    services.forEach(service => {
+        select.append(`<option value="${service.id}">${esc(service.name)} — ${rupiah(service.price)}/${esc(service.unit)}</option>`);
+    });
+}
+
+function renderFullPrices() {
+    const box = $('#fullPriceList');
+    if (!box.length) return;
+
+    box.html(services.map(service => `
+        <article class="price-card col h-100 p-4">
+            <div class="price-content">
+                <h3 class="mb-2">${esc(service.name)}</h3>
+                <p class="mb-0">Tarif per ${esc(service.unit)}</p>
+                <strong class="d-block mt-3">${rupiah(service.price)}</strong>
+            </div>
+        </article>
+    `).join(''));
+}
+
+function addOrderItem(item = null) {
+    const selectedId = item?.service?.id || '';
+    const quantity = item?.quantity || 1;
+
+    const row = $(`
+        <div class="service-row">
+            <label>
+                Layanan
+                <select class="item-service">
+                    <option value="">Pilih layanan...</option>
+                    ${services.map(service => `
+                        <option value="${service.id}" ${String(service.id) === String(selectedId) ? 'selected' : ''}>
+                            ${esc(service.name)}
+                        </option>
+                    `).join('')}
+                </select>
+            </label>
+            <label>
+                Jumlah
+                <input class="item-qty" type="number" min="0.1" step="0.1" value="${quantity}">
+            </label>
+            <div class="row-price">Subtotal<br><b>Rp0</b></div>
+            <button type="button" class="remove-item" title="Hapus layanan">×</button>
+        </div>
+    `);
+
+    $('#orderItems').append(row);
+    refreshOrderRows();
+}
+
+function refreshOrderRows() {
+    let total = 0;
+
+    $('.service-row').each(function () {
+        const row = $(this);
+        const service = getService(row.find('.item-service').val());
+        const input = row.find('.item-qty');
+        let quantity = Number(input.val()) || 0;
+
+        if (service) {
+            if (service.unit === 'pcs') {
+                input.attr({ min: 1, step: 1 });
+                if (quantity > 0) {
+                    quantity = Math.max(1, Math.round(quantity));
+                    input.val(quantity);
+                }
+            } else {
+                input.attr({ min: 0.1, step: 0.1 });
+            }
+
+            const subtotal = Math.round(service.price * quantity);
+            row.find('.row-price b').text(rupiah(subtotal));
+            total += subtotal;
+        } else {
+            row.find('.row-price b').text('Rp0');
+        }
+    });
+
+    $('#totalPreview').text(rupiah(total));
+}
+
+function buildItems(containerSelector = '#orderItems') {
+    const items = [];
+
+    $(`${containerSelector} .service-row`).each(function () {
+        const serviceId = Number($(this).find('.item-service,.edit-service').val());
+        const quantity = Number($(this).find('.item-qty,.edit-qty').val());
+        if (serviceId > 0 && quantity > 0) {
+            items.push({ serviceId, quantity });
+        }
+    });
+
+    return items;
+}
+
+function fetchOrders(callback) {
+    apiGet('orders')
+        .done(data => {
+            allOrders = Array.isArray(data) ? data : [];
+            if (callback) callback(allOrders);
+        })
+        .fail(xhr => {
+            console.error(xhr.responseText);
+            allOrders = [];
+            if (callback) callback(allOrders);
+            showMessage('Gagal mengambil pesanan dari database.');
+        });
+}
+
+function saveOrder(customer, items, nota = '') {
+    return apiPost('save_order', {
+        nota,
+        customer,
+        items,
+        cashier: cashierUsername() || cashierName()
+    });
+}
+
+function updateStatus(nota, status) {
+    return apiPost('status', { nota, status });
+}
+
+function deleteOrder(nota) {
+    return apiPost('delete_order', { nota });
+}
+
+function renderDashboard() {
+    if (!$('#statTotal').length) return;
+
+    fetchOrders(orders => {
+        $('#statTotal').text(orders.length);
+        $('#statProcess').text(orders.filter(o => o.status === 'DIPROSES').length);
+        $('#statDone').text(orders.filter(o => o.status === 'SELESAI').length);
+        $('#statPicked').text(orders.filter(o => o.status === 'DIAMBIL').length);
+
+        const revenue = orders
+            .filter(o => o.status === 'SELESAI' || o.status === 'DIAMBIL')
+            .reduce((sum, order) => sum + Number(order.total || 0), 0);
+        $('#statRevenue').text(rupiah(revenue));
+
+        $('#recentOrders').html(
+            orders.slice(0, 6).map(order => `
+                <a class="recent-item" href="riwayat.html">
+                    <div>
+                        <b>${esc(order.customer)}</b>
+                        <small>${itemsSummary(order)}</small>
+                    </div>
+                    <strong>${rupiah(order.total)}</strong>
+                </a>
+            `).join('') || '<div class="empty-state">Belum ada pesanan.</div>'
+        );
+    });
+}
+
+function renderQueue() {
+    if (!$('#processingList').length) return;
+
+    fetchOrders(orders => {
+        const processing = orders.filter(order => order.status === 'DIPROSES');
+        const done = orders.filter(order => order.status === 'SELESAI');
+
+        $('#processCount').text(processing.length);
+        $('#doneCount').text(done.length);
+
+        $('#processingList').html(
+            processing.map(order => `
+                <article class="queue-card">
+                    <div class="queue-top">
+                        <span class="nota">${esc(order.nota)}</span>
+                        ${statusBadge(order.status)}
+                    </div>
+                    <h3>${esc(order.customer)}</h3>
+                    <p>${itemsSummary(order)} · <b>${rupiah(order.total)}</b></p>
+                    <div class="queue-actions">
+                        <button class="small-btn success status-btn" data-nota="${esc(order.nota)}" data-status="SELESAI">
+                            Tandai Selesai
+                        </button>
+                    </div>
+                </article>
+            `).join('') || '<div class="empty-state">Tidak ada cucian diproses.</div>'
+        );
+
+        $('#doneList').html(
+            done.map(order => `
+                <article class="queue-card">
+                    <div class="queue-top">
+                        <span class="nota">${esc(order.nota)}</span>
+                        ${statusBadge(order.status)}
+                    </div>
+                    <h3>${esc(order.customer)}</h3>
+                    <p>${itemsSummary(order)} · <b>${rupiah(order.total)}</b></p>
+                    <div class="queue-actions">
+                        <button class="small-btn status-btn" data-nota="${esc(order.nota)}" data-status="DIAMBIL">
+                            Tandai Diambil
+                        </button>
+                    </div>
+                </article>
+            `).join('') || '<div class="empty-state">Belum ada yang siap diambil.</div>'
+        );
+    });
+}
+
+function renderHistory() {
+    if (!$('#historyBody').length) return;
+
+    const query = ($('#historySearch').val() || '').toLowerCase();
+    const filtered = allOrders.filter(order => {
+        const text = `${order.nota} ${order.customer} ${itemsSummary(order)}`.toLowerCase();
+        return text.includes(query);
+    });
+
+    $('#historyCount').text(`${filtered.length} pesanan`);
+    $('#historyBody').html(
+        filtered.map(order => `
+            <tr>
+                <td><b>${esc(order.nota)}</b></td>
+                <td>${esc(order.customer)}</td>
+                <td>${itemsSummary(order)}</td>
+                <td><b>${rupiah(order.total)}</b></td>
+                <td>${statusBadge(order.status)}</td>
+                <td>
+                    <div class="history-actions">
+                        <a class="table-action" href="nota.html?nota=${encodeURIComponent(order.nota)}">Cetak Nota</a>
+                        <button class="table-action edit-order" data-nota="${esc(order.nota)}">Edit</button>
+                        <button class="table-action danger delete-order" data-nota="${esc(order.nota)}">Hapus</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('') || '<tr><td colspan="6" class="empty">Belum ada riwayat pesanan.</td></tr>'
+    );
+}
+
+function editRowHTML(item = null) {
+    const serviceId = item?.service?.id || '';
+    const quantity = item?.quantity || 1;
+
+    return `
+        <div class="service-row edit-row">
+            <label>
+                Layanan
+                <select class="edit-service">
+                    <option value="">Pilih layanan...</option>
+                    ${services.map(service => `
+                        <option value="${service.id}" ${String(service.id) === String(serviceId) ? 'selected' : ''}>
+                            ${esc(service.name)}
+                        </option>
+                    `).join('')}
+                </select>
+            </label>
+            <label>
+                Jumlah
+                <input class="edit-qty" type="number" min="0.1" step="0.1" value="${quantity}">
+            </label>
+            <div class="row-price">Subtotal<br><b>Rp0</b></div>
+            <button type="button" class="remove-edit-item" title="Hapus layanan">×</button>
+        </div>
+    `;
+}
+
+function refreshEditRows() {
+    let total = 0;
+
+    $('.edit-row').each(function () {
+        const row = $(this);
+        const service = getService(row.find('.edit-service').val());
+        const input = row.find('.edit-qty');
+        let quantity = Number(input.val()) || 0;
+
+        if (service) {
+            if (service.unit === 'pcs') {
+                input.attr({ min: 1, step: 1 });
+                if (quantity > 0) {
+                    quantity = Math.max(1, Math.round(quantity));
+                    input.val(quantity);
+                }
+            } else {
+                input.attr({ min: 0.1, step: 0.1 });
+            }
+
+            const subtotal = Math.round(service.price * quantity);
+            row.find('.row-price b').text(rupiah(subtotal));
+            total += subtotal;
+        } else {
+            row.find('.row-price b').text('Rp0');
+        }
+    });
+
+    $('#editTotal').text(rupiah(total));
+}
+
+function openEditOrder(nota) {
+    const order = allOrders.find(item => item.nota === nota);
+    if (!order) {
+        showMessage('Pesanan tidak ditemukan.');
         return;
     }
-    if (!(await requireAuth()))
+
+    $('#editNota').val(order.nota);
+    $('#editCustomer').val(order.customer);
+    $('#editItems').empty();
+
+    (order.items || []).forEach(item => $('#editItems').append(editRowHTML(item)));
+    if (!order.items?.length) $('#editItems').append(editRowHTML());
+
+    $('#editModal').addClass('open').attr('aria-hidden', 'false');
+    refreshEditRows();
+}
+
+function receiptHTML(order) {
+    const rows = (order.items || []).map(item => `
+        <div class="receipt-item">
+            <div>
+                <b>${esc(item.service.name)}</b>
+                <small>${item.quantity} ${esc(item.service.unit)} × ${rupiah(item.service.price)}</small>
+            </div>
+            <strong>${rupiah(item.subtotal)}</strong>
+        </div>
+    `).join('');
+
+    const date = new Date(order.createdAt).toLocaleString('id-ID');
+
+    return `
+        <div class="receipt-head">
+            <img src="assets/logo-hinomaru-bright.png" alt="Logo Laundry Hinomaru">
+            <div>
+                <h2>LAUNDRY HINOMARU</h2>
+                <p>Jl. Skarda N. No.80, Mks</p>
+                <p>0823 9367 8475</p>
+            </div>
+        </div>
+        <div class="receipt-title">NOTA LAUNDRY</div>
+        <div class="receipt-meta">
+            <div><span>No. Nota</span><b>${esc(order.nota)}</b></div>
+            <div><span>Tanggal</span><b>${esc(date)}</b></div>
+            <div><span>Pelanggan</span><b>${esc(order.customer)}</b></div>
+            <div><span>Kasir</span><b>${esc(order.cashier || cashierName())}</b></div>
+        </div>
+        <div class="receipt-line"></div>
+        ${rows}
+        <div class="receipt-total">
+            <span>TOTAL</span>
+            <strong>${rupiah(order.total)}</strong>
+        </div>
+        <p class="receipt-thanks">Terima kasih · Laundry Hinomaru</p>
+    `;
+}
+
+function initLogin() {
+    $('#toggleCashier').on('click', function () {
+        $('#loginView').addClass('hidden');
+        $('#cashierView').removeClass('hidden');
+    });
+
+    $('#backToLogin').on('click', function () {
+        $('#cashierView').addClass('hidden');
+        $('#loginView').removeClass('hidden');
+        $('#cashierError, #cashierSuccess').hide().text('');
+    });
+
+    $('#loginForm').on('submit', function (event) {
+        event.preventDefault();
+
+        const username = $('#username').val().trim();
+        const password = $('#password').val();
+        const errorBox = $('#loginError');
+
+        errorBox.hide().text('');
+
+        if (!username || !password) {
+            errorBox.text('Username dan password wajib diisi.').show();
+            return;
+        }
+
+        apiPost('login', { username, password })
+            .done(function (result) {
+                if (!result || !result.success) {
+                    errorBox.text(result?.message || 'Username atau password salah.').show();
+                    return;
+                }
+
+                localStorage.setItem(SESSION_KEY, JSON.stringify(result.cashier));
+                window.location.href = 'index.html';
+            })
+            .fail(function (xhr) {
+                let message = 'Login gagal. Pastikan Apache dan MySQL XAMPP menyala.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    message = xhr.responseJSON.message;
+                } else if (xhr.responseText) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        if (data.message) message = data.message;
+                    } catch (e) {}
+                }
+                errorBox.text(message).show();
+                console.error('Login error:', xhr.responseText);
+            });
+    });
+
+    $('#cashierForm').on('submit', function (event) {
+        event.preventDefault();
+
+        const name = $('#cashierNameInput').val().trim();
+        const username = $('#cashierUsernameInput').val().trim();
+        const password = $('#cashierPasswordInput').val();
+        const confirm = $('#cashierPasswordConfirm').val();
+        const errorBox = $('#cashierError');
+        const successBox = $('#cashierSuccess');
+
+        errorBox.hide().text('');
+        successBox.hide().text('');
+
+        if (!name || !username || !password || !confirm) {
+            errorBox.text('Semua data kasir wajib diisi.').show();
+            return;
+        }
+
+        if (password !== confirm) {
+            errorBox.text('Konfirmasi password tidak sama.').show();
+            return;
+        }
+
+        apiPost('add_cashier', { name, username, password })
+            .done(function (result) {
+                if (!result || !result.success) {
+                    errorBox.text(result?.message || 'Kasir gagal ditambahkan.').show();
+                    return;
+                }
+
+                successBox.text('Kasir berhasil ditambahkan. Silakan login dengan username dan password tersebut.').show();
+                $('#cashierForm')[0].reset();
+                $('#username').val(username);
+                setTimeout(function () {
+                    $('#cashierView').addClass('hidden');
+                    $('#loginView').removeClass('hidden');
+                    $('#password').focus();
+                }, 700);
+            })
+            .fail(function (xhr) {
+                const message = xhr.responseJSON?.message || 'Gagal menambahkan kasir. Pastikan database XAMPP aktif.';
+                errorBox.text(message).show();
+            });
+    });
+}
+
+$(function () {
+    if (isLoginPage()) {
+        initLogin();
         return;
-    $('#cashierName').text(cashierName());
+    }
+
+    if (!requireLogin()) return;
+
+    setCashierName();
     loadServices();
-    loadDashboard();
-    loadQueue();
+    renderDashboard();
+    renderQueue();
     fetchOrders(renderHistory);
-    $('#addItem').on('click', addOrderItem);
-    $(document).on('input change', '.item-service,.item-qty', refreshOrderRows);
-    $(document).on('click', '.remove-item', function () { if ($('.service-row').length > 1) {
-        $(this).closest('.service-row').remove();
-        refreshOrderRows();
-    } });
-    $('#orderForm').on('submit', function (e) { e.preventDefault(); const customer = $('#customer').val().trim(); const items = buildPayload(); if (!customer)
-        return toast('Isi nama pelanggan.'); if (!items.length)
-        return toast('Tambahkan layanan terlebih dahulu.'); createOrder(customer, items, o => { toast('Pesanan diterima. Nota siap dicetak.'); setTimeout(() => { location.href = 'nota.html?nota=' + encodeURIComponent(o.nota) + '&issuedAtDropoff=1'; }, 350); }, msg => toast(msg)); });
-    $(document).on('click', '.status-btn', function () { const b = $(this); updateStatus(b.data('nota'), b.data('status'), () => { loadQueue(); loadDashboard(); fetchOrders(renderHistory); toast('Status diperbarui.'); }, toast); });
+
+    $('#logoutBtn').on('click', function () {
+        localStorage.removeItem(SESSION_KEY);
+        location.replace('login.html');
+    });
+
+    $('#addItem').on('click', () => addOrderItem());
+
+    $(document).on('input change', '.item-service, .item-qty', refreshOrderRows);
+
+    $(document).on('click', '.remove-item', function () {
+        if ($('.service-row').length > 1) {
+            $(this).closest('.service-row').remove();
+            refreshOrderRows();
+        }
+    });
+
+    $('#orderForm').on('submit', function (event) {
+        event.preventDefault();
+
+        const customer = $('#customer').val().trim();
+        const items = buildItems('#orderItems');
+
+        if (!customer) {
+            showMessage('Isi nama pelanggan.');
+            return;
+        }
+        if (!items.length) {
+            showMessage('Pilih minimal satu layanan.');
+            return;
+        }
+
+        saveOrder(customer, items)
+            .done(result => {
+                if (!result.success) {
+                    showMessage(result.message || 'Pesanan gagal disimpan.');
+                    return;
+                }
+
+                showMessage('Pesanan tersimpan ke database.');
+                setTimeout(() => {
+                    location.href = `nota.html?nota=${encodeURIComponent(result.order.nota)}`;
+                }, 350);
+            })
+            .fail(xhr => {
+                showMessage(xhr.responseJSON?.message || 'Gagal menyimpan pesanan ke database.');
+            });
+    });
+
+    $(document).on('click', '.status-btn', function () {
+        const button = $(this);
+        const nota = button.data('nota');
+        const status = button.data('status');
+
+        updateStatus(nota, status)
+            .done(result => {
+                if (!result.success) {
+                    showMessage(result.message || 'Status gagal diubah.');
+                    return;
+                }
+                renderQueue();
+                renderDashboard();
+                fetchOrders(renderHistory);
+                showMessage('Status pesanan diperbarui.');
+            })
+            .fail(xhr => showMessage(xhr.responseJSON?.message || 'Gagal mengubah status.'));
+    });
+
     $('#historySearch').on('input', renderHistory);
-    $(document).on('click', '.edit-order', function () { openEditOrder($(this).data('nota')); });
-    $(document).on('click', '.delete-order', function () { const nota = $(this).data('nota'); if (confirm('Hapus pesanan ' + nota + '?'))
-        deleteOrder(nota, () => { fetchOrders(renderHistory); loadDashboard(); loadQueue(); toast('Pesanan dihapus.'); }, toast); });
-    $(document).on('input change', '.edit-service,.edit-qty', refreshEditRows);
-    $('#editAddItem').on('click', () => addEditItem());
-    $(document).on('click', '.remove-edit-item', function () { if ($('.edit-row').length > 1) {
-        $(this).closest('.edit-row').remove();
+
+    $(document).on('click', '.edit-order', function () {
+        openEditOrder($(this).data('nota'));
+    });
+
+    $(document).on('click', '.delete-order', function () {
+        const nota = $(this).data('nota');
+        if (!confirm(`Hapus pesanan ${nota}?`)) return;
+
+        deleteOrder(nota)
+            .done(result => {
+                if (!result.success) {
+                    showMessage(result.message || 'Gagal menghapus pesanan.');
+                    return;
+                }
+                fetchOrders(renderHistory);
+                renderDashboard();
+                renderQueue();
+                showMessage('Pesanan berhasil dihapus dari database.');
+            })
+            .fail(xhr => showMessage(xhr.responseJSON?.message || 'Gagal menghapus pesanan.'));
+    });
+
+    $(document).on('input change', '.edit-service, .edit-qty', refreshEditRows);
+
+    $('#editAddItem').on('click', () => {
+        $('#editItems').append(editRowHTML());
         refreshEditRows();
-    } });
-    $('#closeEdit,#cancelEdit').on('click', () => $('#editModal').removeClass('open').attr('aria-hidden', 'true'));
-    $('#editForm').on('submit', function (e) { e.preventDefault(); const nota = $('#editNota').val(), customer = $('#editCustomer').val().trim(), items = buildEditPayload(); if (!customer)
-        return toast('Isi nama pelanggan.'); if (!items.length)
-        return toast('Tambahkan layanan.'); updateOrder(nota, customer, items, () => { $('#editModal').removeClass('open').attr('aria-hidden', 'true'); fetchOrders(renderHistory); loadDashboard(); loadQueue(); toast('Perubahan disimpan.'); }, toast); });
+    });
+
+    $(document).on('click', '.remove-edit-item', function () {
+        if ($('.edit-row').length > 1) {
+            $(this).closest('.edit-row').remove();
+            refreshEditRows();
+        }
+    });
+
+    $('#closeEdit, #cancelEdit').on('click', function () {
+        $('#editModal').removeClass('open').attr('aria-hidden', 'true');
+    });
+
+    $('#editForm').on('submit', function (event) {
+        event.preventDefault();
+
+        const nota = $('#editNota').val();
+        const customer = $('#editCustomer').val().trim();
+        const items = buildItems('#editItems');
+
+        if (!customer || !items.length) {
+            showMessage('Nama pelanggan dan layanan wajib diisi.');
+            return;
+        }
+
+        saveOrder(customer, items, nota)
+            .done(result => {
+                if (!result.success) {
+                    showMessage(result.message || 'Perubahan gagal disimpan.');
+                    return;
+                }
+
+                $('#editModal').removeClass('open').attr('aria-hidden', 'true');
+                fetchOrders(renderHistory);
+                renderDashboard();
+                renderQueue();
+                showMessage('Perubahan pesanan tersimpan.');
+            })
+            .fail(xhr => showMessage(xhr.responseJSON?.message || 'Gagal menyimpan perubahan.'));
+    });
+
     if ($('#standaloneReceipt').length) {
         const nota = new URLSearchParams(location.search).get('nota');
-        const done = o => { $('#standaloneReceipt').html(receiptHTML(o)); };
-        if (localMode) {
-            const o = normalizeLocalOrder(localOrders()).find(x => x.nota === nota);
-            o ? done(o) : $('#standaloneReceipt').html('<div class="empty-state">Nota tidak ditemukan.</div>');
+
+        if (!nota) {
+            $('#standaloneReceipt').html('<div class="empty-state">Nomor nota tidak ditemukan.</div>');
+        } else {
+            apiGet('order', { nota })
+                .done(order => $('#standaloneReceipt').html(receiptHTML(order)))
+                .fail(xhr => $('#standaloneReceipt').html(`<div class="empty-state">${esc(xhr.responseJSON?.message || 'Nota tidak ditemukan.')}</div>`));
         }
-        else
-            $.getJSON('/api/orders/' + encodeURIComponent(nota || '')).done(done).fail(() => { const o = normalizeLocalOrder(localOrders()).find(x => x.nota === nota); o ? done(o) : $('#standaloneReceipt').html('<div class="empty-state">Nota tidak ditemukan.</div>'); });
+
         $('#standalonePrint').on('click', () => window.print());
     }
-    $('#logoutBtn').on('click', () => { localStorage.removeItem(SESSION_KEY); location.replace(LOGIN_PAGE); });
-    setInterval(() => { loadDashboard(); loadQueue(); fetchOrders(renderHistory); }, 7000);
+
+    setInterval(() => {
+        if (document.hidden) return;
+        renderDashboard();
+        renderQueue();
+        fetchOrders(renderHistory);
+    }, 10000);
 });
